@@ -134,13 +134,6 @@ class ChurnRequest(BaseModel):
 def _risk(p: float) -> str:
     return "High" if p >= 0.66 else "Medium" if p >= 0.33 else "Low"
 
-
-@lru_cache(maxsize=1)
-def _churn_explainer():
-    """Rebuild the SHAP explainer from the model once (never unpickle it)."""
-    return shap.TreeExplainer(store.model("churn")["model"])
-
-
 @app.post("/predict_churn")
 def predict_churn(req: ChurnRequest):
     bundle = store.model("churn")
