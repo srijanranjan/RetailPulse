@@ -14,19 +14,19 @@ backend and an interactive **Streamlit** dashboard.
 ## 📸 Dashboard
 
 ### Home — KPI overview
-![Dashboard home](docs/screenshots/dashboard.png)
+![Dashboard home](docs/screenshots/Dashboard.png)
 
 ### Sales Analytics — revenue trends, top products, markets
 ![Sales Analytics](docs/screenshots/sales_analytics.png)
 
 ### Demand Forecast — 30-day Prophet forecast with 90% confidence bands
-![Demand Forecast](docs/screenshots/demand_forecast.png)
+![Demand Forecast](docs/screenshots/Demand_forecast.png)
 
 ### Customer Analytics — RFM segments & live churn prediction
 ![Customer Analytics](docs/screenshots/customer_analytics.png)
 
 ### Inventory — reorder recommendations & stock alerts
-![Inventory](docs/screenshots/inventory.png)
+![Inventory](docs/screenshots/Inventory.png)
 
 ---
 
