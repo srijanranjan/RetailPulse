@@ -6,7 +6,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +71,106 @@ def churn() -> pd.DataFrame:
 def inventory() -> pd.DataFrame:
     return _load("inventory")
 
+def _pg() -> Engine | None:
+    eng = engine()
+    return eng if (eng is not None and eng.dialect.name == "postgresql") else None
+
+
+def kpis() -> dict:
+    inv = inventory()
+    low = int((inv["alert"] == "LOW_STOCK").sum())
+    over = int((inv["alert"] == "OVERSTOCK").sum())
+    eng = _pg()
+    if eng is not None:
+        sql = text('''
+            SELECT COALESCE(SUM("TotalPrice"), 0) AS rev,
+                   COUNT(DISTINCT "Invoice")      AS orders,
+                   COUNT(DISTINCT "CustomerID")   AS customers,
+                   COUNT(DISTINCT "StockCode")    AS products,
+                   MIN("InvoiceDate")             AS dfrom,
+                   MAX("InvoiceDate")             AS dto
+            FROM sales
+        ''')
+        with eng.connect() as c:
+            r = c.execute(sql).mappings().one()
+        return {
+            "total_revenue": round(float(r["rev"]), 2),
+            "total_orders": int(r["orders"]),
+            "total_customers": int(r["customers"]),
+            "total_products": int(r["products"]),
+            "low_stock_alerts": low,
+            "overstock_alerts": over,
+            "date_from": str(pd.to_datetime(r["dfrom"]).date()),
+            "date_to": str(pd.to_datetime(r["dto"]).date()),
+            "data_source": data_source(),
+        }
+    tx = transactions()
+    return {
+        "total_revenue": round(float(tx["TotalPrice"].sum()), 2),
+        "total_orders": int(tx["Invoice"].nunique()),
+        "total_customers": int(tx["CustomerID"].nunique()),
+        "total_products": int(tx["StockCode"].nunique()),
+        "low_stock_alerts": low,
+        "overstock_alerts": over,
+        "date_from": str(tx["InvoiceDate"].min().date()),
+        "date_to": str(tx["InvoiceDate"].max().date()),
+        "data_source": data_source(),
+    }
+
+
+def monthly_sales() -> list[dict]:
+    eng = _pg()
+    if eng is not None:
+        sql = text('''
+            SELECT to_char(date_trunc('month', "InvoiceDate"), 'YYYY-MM') AS month,
+                   SUM("TotalPrice") AS revenue
+            FROM sales GROUP BY 1 ORDER BY 1
+        ''')
+        with eng.connect() as c:
+            rows = c.execute(sql).mappings().all()
+        return [{"month": r["month"], "revenue": round(float(r["revenue"]), 2)}
+                for r in rows]
+    tx = transactions()
+    m = (tx.set_index("InvoiceDate")["TotalPrice"].resample("MS").sum().reset_index())
+    m["InvoiceDate"] = m["InvoiceDate"].dt.strftime("%Y-%m")
+    return m.rename(columns={"InvoiceDate": "month", "TotalPrice": "revenue"}) \
+            .to_dict(orient="records")
+
+
+def top_products(limit: int) -> list[dict]:
+    eng = _pg()
+    if eng is not None:
+        sql = text('''
+            SELECT "Description" AS product, SUM("TotalPrice") AS revenue
+            FROM sales GROUP BY "Description"
+            ORDER BY revenue DESC LIMIT :n
+        ''')
+        with eng.connect() as c:
+            rows = c.execute(sql, {"n": limit}).mappings().all()
+        return [{"product": r["product"], "revenue": round(float(r["revenue"]), 2)}
+                for r in rows]
+    tx = transactions()
+    top = tx.groupby("Description")["TotalPrice"].sum().nlargest(limit).round(2).reset_index()
+    return top.rename(columns={"Description": "product", "TotalPrice": "revenue"}) \
+              .to_dict(orient="records")
+
+
+def sales_by_country(limit: int) -> list[dict]:
+    eng = _pg()
+    if eng is not None:
+        sql = text('''
+            SELECT "Country" AS country, SUM("TotalPrice") AS revenue
+            FROM sales GROUP BY "Country"
+            ORDER BY revenue DESC LIMIT :n
+        ''')
+        with eng.connect() as c:
+            rows = c.execute(sql, {"n": limit}).mappings().all()
+        return [{"country": r["country"], "revenue": round(float(r["revenue"]), 2)}
+                for r in rows]
+    tx = transactions()
+    c = tx.groupby("Country")["TotalPrice"].sum().nlargest(limit).round(2).reset_index()
+    return c.rename(columns={"Country": "country", "TotalPrice": "revenue"}) \
+            .to_dict(orient="records")
 
 @lru_cache(maxsize=None)
 def model(name: str):

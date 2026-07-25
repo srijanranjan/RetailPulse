@@ -28,47 +28,23 @@ def root():
 
 @app.get("/dashboard")
 def dashboard():
-    tx = store.transactions()
-    inv = store.inventory()
-    return {
-        "total_revenue": round(float(tx["TotalPrice"].sum()), 2),
-        "total_orders": int(tx["Invoice"].nunique()),
-        "total_customers": int(tx["CustomerID"].nunique()),
-        "total_products": int(tx["StockCode"].nunique()),
-        "low_stock_alerts": int((inv["alert"] == "LOW_STOCK").sum()),
-        "overstock_alerts": int((inv["alert"] == "OVERSTOCK").sum()),
-        "date_from": str(tx["InvoiceDate"].min().date()),
-        "date_to": str(tx["InvoiceDate"].max().date()),
-        "data_source": store.data_source(),
-    }
+    return store.kpis()
+
 
 
 @app.get("/sales/monthly")
 def sales_monthly():
-    tx = store.transactions()
-    m = (tx.set_index("InvoiceDate")["TotalPrice"].resample("MS").sum()
-         .reset_index())
-    m["InvoiceDate"] = m["InvoiceDate"].dt.strftime("%Y-%m")
-    return m.rename(columns={"InvoiceDate": "month", "TotalPrice": "revenue"}) \
-            .to_dict(orient="records")
+    return store.monthly_sales()
 
 
 @app.get("/sales/top_products")
 def top_products(limit: int = Query(10, ge=1, le=100)):
-    tx = store.transactions()
-    top = (tx.groupby("Description")["TotalPrice"].sum()
-           .nlargest(limit).round(2).reset_index())
-    return top.rename(columns={"Description": "product", "TotalPrice": "revenue"}) \
-              .to_dict(orient="records")
+    return store.top_products(limit)
 
 
 @app.get("/sales/by_country")
 def sales_by_country(limit: int = Query(10, ge=1, le=50)):
-    tx = store.transactions()
-    c = (tx.groupby("Country")["TotalPrice"].sum()
-         .nlargest(limit).round(2).reset_index())
-    return c.rename(columns={"Country": "country", "TotalPrice": "revenue"}) \
-            .to_dict(orient="records")
+    return store.sales_by_country(limit)
 
 
 @app.get("/forecast")
