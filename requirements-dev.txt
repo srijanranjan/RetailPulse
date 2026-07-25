@@ -1,0 +1,13 @@
+-r requirements.txt          # dashboard deps
+-r requirements-api.txt      # backend deps
+
+# machine learning / forecasting (training only)
+prophet==1.1.7
+cmdstanpy==1.2.5
+shap==0.48.0                 # optional: code uses XGBoost's native TreeSHAP
+openpyxl==3.1.5              # reads the source .xlsx
+
+# visualization / notebooks
+matplotlib==3.10.3
+nbformat==5.10.4
+jupyter==1.1.1
