@@ -6,8 +6,8 @@ predicts churn, and recommends inventory actions — served by a **FastAPI**
 backend and an interactive **Streamlit** dashboard.
 
 <!-- Replace these with your live URLs once deployed -->
-**Live dashboard:** [https://<your-app>.streamlit.app](https://retailpulse-zi-d-io.streamlit.app/)
-**Live API docs:** [https://retailpulse-api.onrender.com/docs](https://retailpulse-api-l3q9.onrender.com)
+**Live dashboard:** [https://retailpulse-zi-d-io.streamlit.app](https://retailpulse-zi-d-io.streamlit.app/)
+**Live API docs:** [https://retailpulse-api.onrender.com/docs](https://retailpulse-api-l3q9.onrender.com/docs)
 
 ---
 
